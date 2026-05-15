@@ -34,14 +34,15 @@ void w4(uint32_t addr,uint32_t val)
     fclose(f);
 }
 int main(){
-  
+  load_bin("sum.bin");
+	M[0x224] = 0x73;
+   M[0x224+1] = 0x00;
+   M[0x224+2] = 0x10;
+   M[0x224+3] = 0x00;
+pc=0;  
 while(1){
-	load_bin("sum.bin");
 x[0]=0;
-M[0x224] = 0x73;
-M[0x224+1] = 0x00;
-M[0x224+2] = 0x10;
-M[0x224+3] = 0x00;
+
  uint32_t next_pc = pc + 4;
 	uint32_t inst=M[pc];
   int op=inst&0x7f;
