@@ -94,10 +94,13 @@ if(fun3==0x0)
 }break;}  
 
 
-pc=next_pc;
+
+
+}  pc=next_pc;}
+
+return 0;
 
 }
-
 
 
 
