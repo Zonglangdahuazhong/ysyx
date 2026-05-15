@@ -1,31 +1,24 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-// 1. 【新增】引入 AM 核心头文件
 #include <am.h>
-#include <klib-macros.h>
+#include <stdbool.h>
 
 #define MEM_SIZE 16777216
 
 uint32_t pc;
 uint32_t x[32];
 uint8_t M[MEM_SIZE];
+#define VGA_START 0x20000000
+#define VGA_END   0x20040000
 
-// 2. 【新增】定义标准屏幕大小
-#define SCREEN_W 400
-#define SCREEN_H 300
 
-// 虚拟显存，初始化为全黑
-uint32_t vram[SCREEN_W * SCREEN_H] = {0}; 
+#define SCREEN_W 256
+#define SCREEN_H 256
+uint32_t vram[SCREEN_W * SCREEN_H]; 
 
-// 3. 【新增】负责将 vram 数组完整同步到屏幕的渲染函数
-void flush_vram_to_screen() {
-  for (int y = 0; y < SCREEN_H; y++) {
-    // 传入 vram 对应行的起始指针，最后一行时 sync 设为 true 触发显示
-    io_write(AM_GPU_FBDRAW, 0, y, &vram[y * SCREEN_W], SCREEN_W, 1, (y == SCREEN_H - 1));
-  }
-}
+
+
 
 uint8_t r(uint32_t addr) {
 	return M[addr];
@@ -62,12 +55,7 @@ void load_bin(const char *filename) {
 }
 
 int main() {
-
-	
-	// 4. 【新增】在模拟器一启动时，初始化 AM 图形环境
-	ioe_init(); 
-
-	load_bin("vga.bin"); // 如果你要跑 vga 程序，记得把这里改成你的 vga.bin 路径
+load_bin("vga.bin"); 
 
 /*	M[0x228] = 0x73;
 	M[0x228+1] = 0x00;
@@ -77,6 +65,10 @@ int main() {
 
 	while(1) {
 		x[0] = 0;
+		if (pc >= MEM_SIZE - 4) {
+            printf("[minirvEMU] PC out of bounds, entering host dead loop to keep display.\n");
+            while(1) { /* 留驻画面 */ }
+        }
 
 		uint32_t next_pc = pc + 4;
 		uint32_t inst = r4(pc);
@@ -128,27 +120,40 @@ int main() {
 			}
 			/* sw sb */
 			case 0x23: { 
-				if (fun3 == 0x2) {
-					uint32_t addr = x[rs1] + imms;
-					w4(addr, x[rs2]);
-
-					if (addr >= 0x20000000 && addr < 0x20040000) {
-						uint32_t offset = (addr - 0x20000000) / 4;
-						// 严格的安全检查：只有在 0 到 120000 范围内的合法偏移才允许写入
-						if (offset >= 0 && offset < SCREEN_W * SCREEN_H) {
-							vram[offset] = x[rs2];
-						}				
-						}
-else {
-        // 原本的普通内存写入逻辑
-        w4(addr,x[rs2]);}
+			 if (fun3 == 0x2) { // sw 指令
+                    uint32_t addr = x[rs1] + imms;
+                    
+                    // ================= 2. 关键：拦截显存写入并实时刷新 =================
+                    if (addr >= VGA_START && addr < VGA_END) {
+                        uint32_t offset = (addr - VGA_START) / 4;
+                        if (offset < SCREEN_W * SCREEN_H) {
+                            vram[offset] = x[rs2]; // 写入自定义显存
+                            
+                            // 计算当前像素的 X, Y 坐标
+                            int pixel_x = offset % SCREEN_W;
+                            int pixel_y = offset / SCREEN_W;
+                            
+                            // 实时同步这 1 个像素到 AM 屏幕上
+                            AM_GPU_FBDRAW_T draw = {
+                                .x = pixel_x,   .y = pixel_y, 
+                                .pixels = &vram[offset], 
+                                .w = 1,         .h = 1, 
+                                .sync = true
+                            };
+                            ioe_write(AM_GPU_FBDRAW, &draw);
+                        }
+                    } else {
+                        // 普通物理内存写入
+                        w4(addr, x[rs2]);
+                    }
+                }
 						else if (fun3 == 0x0) {
 					uint32_t addr = x[rs1] + imms;
 					uint8_t va1l = x[rs2] & 0xff;
 					w(addr, va1l);
 				}
 				break;
-			}} 
+			}
 			/* jalr */ 
 			case 0x67: {
 				if (fun3 == 0x0) {
@@ -159,24 +164,18 @@ else {
 				break;
 			}  
 			/* ebreak */
-			case 0x73: {    
+			/*case 0x73: {    
 				if (inst == 0x00100073) {  
 					printf("ebreak hit, stop program\n");
 					printf("Result in x[10] (a0) = %u\n", x[10]);
-
-					// 6. 【修正】当程序遇到 ebreak 停机时，开始向屏幕刷新画面并锁死窗口
-				//	flush_vram_to_screen();
-					while (1) {
-						io_read(AM_INPUT_KEYBRD); // 轮询键盘防止卡死，按 ESC 可配合底层退出
-					}
-				}
+}} */
 				break;
-			}
+			}pc = next_pc;
 		}  
 		
-		pc = next_pc;
+	while(1) { }
+    return 0;
 
 	}
 
-}return 0;
-}
+
