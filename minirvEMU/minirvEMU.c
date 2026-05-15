@@ -33,11 +33,11 @@ while(1){uint32_t inst=M[pc];
  uint32_t funct7=(inst>>25)&0x7f;
   int32_t immi= (int32_t)inst >> 20;
 	int32_t imms=((inst>>25)<<5)|((inst>>7)&0x1f);
-if (imms & 0x800); imms |= 0xfffff000;    
+if (imms & 0x800) imms |= 0xfffff000;    
 uint32_t immu=inst & 0xfffff000;
 
 	pc=pc+4;
-	switch(op){u
+	switch(op){
 	/*   ADD  */	
 case 0x33:
     {if (fun3 == 0x0 && funct7 == 0x00) {
@@ -61,10 +61,10 @@ case 0x37:
    { if (fun3 == 0x2) {
         uint32_t addr=x[rs1] + immi;
         x[rd] = r4(addr);
-    }else if (fun3 == 0x4)
+    }else if (fun3 == 0x4){
              uint32_t addr=x[rs1] + immi;
             uint8_t x=r(addr);
-						x[rd]=uint32_t x;
+						x[rd]=(uint32_t)x;}
     break;}
 
 
@@ -73,14 +73,14 @@ case 0x37:
    { if (fun3 == 0x2) {
         uint32_t addr=x[rs1] + imms;
         w4(addr, x[rs2]);
-    }else if (fun3 == 0x0)
+    }else if (fun3 == 0x0){
             uint32_t addr=x[rs1] + imms;
 						uint8_t va1l=x[rs2]&0xff;
-						w(addr,va1l)
+						w(addr,va1l)}
     break;
 	 } 
 	 /* jalr*/ 
-	 case:0x67
+	 case 0x67:
 	 {
 if(fun3==0x0)
 {
@@ -89,8 +89,8 @@ if(fun3==0x0)
     x[rd] = pc + 4;   
     pc = target & ~1;   
 
-    break;
-}
+  
+}break;}
 
 
 
