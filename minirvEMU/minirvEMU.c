@@ -1,7 +1,8 @@
 #include<stdio.h>
 #include<stdint.h>
+#include <stdlib.h>
 #define MEM_SIZE 16777216
-uint32_t pc=0;
+uint32_t pc;
 uint32_t  x[32];
 uint8_t M[MEM_SIZE];
 uint8_t r(uint32_t addr){
@@ -34,17 +35,18 @@ void w4(uint32_t addr,uint32_t val)
     fclose(f);
 }
 int main(){
-  load_bin("sum.bin");
-	M[0x224] = 0x73;
-   M[0x224+1] = 0x00;
-   M[0x224+2] = 0x10;
-   M[0x224+3] = 0x00;
-pc=0;  
+  int cycle;
+	load_bin("sum.bin");
+	M[0x228] = 0x73;
+   M[0x228+1] = 0x00;
+   M[0x228+2] = 0x10;
+   M[0x228+3] = 0x00;  
+	 pc=0;
 while(1){
 x[0]=0;
 
  uint32_t next_pc = pc + 4;
-	uint32_t inst=M[pc];
+	uint32_t inst=r4(pc);
   int op=inst&0x7f;
   uint32_t rd=(inst>>7)&0x1f;
   uint32_t fun3=(inst>>12)&0x7;
@@ -52,9 +54,10 @@ x[0]=0;
   uint32_t rs2=(inst>>20)&0x1f;
  uint32_t funct7=(inst>>25)&0x7f;
   int32_t immi= (int32_t)inst >> 20;
-	int32_t imms=((inst>>25)<<5)|((inst>>7)&0x1f);
-if (imms & 0x800) imms |= 0xfffff000;    
-uint32_t immu=inst & 0xfffff000;
+	int32_t imms = ((inst >> 25) << 5) | ((inst >> 7) & 0x1f);
+if (inst & 0x80000000) { 
+    imms |= 0xFFFFF000;  
+}
 	switch(op){
 	/*   ADD  */	
 case 0x33:
@@ -72,7 +75,7 @@ case 0x13:
 
 /* lui */
 case 0x37:
-   { x[rd]=immu;
+   { x[rd]=imms;
     break;}
 /* lw  lbu*/
 		case 0x03:
@@ -113,14 +116,21 @@ if(fun3==0x0)
 case 0x73: {   
     if (inst == 0x00100073) {  
         printf("ebreak hit, stop program\n");
+				printf("Result in x[10] (a0) = %u\n", x[10]);
         exit(0);
     }
     break;
 }
 
 
-}  pc=next_pc;}
-printf("%u",x[10]);
+}  pc=next_pc;
+printf("pc=0x%08x inst=0x%08x\n", pc, inst);
+for (int i = 0; i < 32; i++) {
+    printf("%08x\n", ((uint32_t*)M)[i]);
+}
+printf("entry inst = 0x%08x\n", M[0]);
+printf("%d\n",cycle);
+cycle=cycle+1;}
 return 0;
 
 }
