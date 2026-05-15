@@ -91,7 +91,12 @@ if(fun3==0x0)
    next_pc = target & ~1;   
 
   
-}break;}
+}break;}  
+
+
+pc=next_pc;
+
+}
 
 
 
