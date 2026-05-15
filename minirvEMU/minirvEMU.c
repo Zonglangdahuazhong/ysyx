@@ -21,10 +21,22 @@ void w4(uint32_t addr,uint32_t val)
  M[addr]     = val & 0xFF;
     M[addr + 1] = (val >> 8) & 0xFF;
     M[addr + 2] = (val >> 16) & 0xFF;
-    M[addr + 3] = (val >> 24) & 0xFF;}                                                                                                                                           
+    M[addr + 3] = (val >> 24) & 0xFF;}      
+		void load_bin(const char *filename) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("open bin failed");
+        return;
+    }
+
+    fread(M, 1, MEM_SIZE, f);
+
+    fclose(f);
+}
 int main(){
   
 while(1){
+	load_bin("sum.bin");
 x[0]=0;
  uint32_t next_pc = pc + 4;
 	uint32_t inst=M[pc];
@@ -93,11 +105,17 @@ if(fun3==0x0)
   
 }break;}  
 
-
+case 0x73: {   
+    if (inst == 0x224) {  
+        printf("ebreak hit, stop program\n");
+        exit(0);
+    }
+    break;
+}
 
 
 }  pc=next_pc;}
-
+printf("%u",x[10]);
 return 0;
 
 }
