@@ -1,6 +1,6 @@
 #include<stdint.h>
  #include<stdio.h>
-  uint8_t pc=0;
+  uint8_t pc=1;
   uint8_t R[4];
  uint8_t M[16]={139,145,160,177,41,23,209,126};
  void inst_cycle(){
@@ -16,7 +16,10 @@
  else if(op==2){ R[rd]=imm;}
    else if(op==3){if(R[rs2]!=R[0]) pc=addr; }}
    int main(){
- while(R[2]!=55){inst_cycle();
+		 uint8_t m;
+		 scanf("%hhu",&m);
+		 R[0]=m+1;
+ while(R[1]!=R[0]){inst_cycle();
 printf("%u %u %u %u\n",R[0],R[1],R[2],R[3]);
 
  } return 0;               }                 
