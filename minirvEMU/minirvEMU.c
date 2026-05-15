@@ -24,7 +24,10 @@ void w4(uint32_t addr,uint32_t val)
     M[addr + 3] = (val >> 24) & 0xFF;}                                                                                                                                           
 int main(){
   
-while(1){uint32_t inst=M[pc];
+while(1){
+x[0]=0;
+ uint32_t next_pc = pc + 4;
+	uint32_t inst=M[pc];
   int op=inst&0x7f;
   uint32_t rd=(inst>>7)&0x1f;
   uint32_t fun3=(inst>>12)&0x7;
@@ -35,8 +38,6 @@ while(1){uint32_t inst=M[pc];
 	int32_t imms=((inst>>25)<<5)|((inst>>7)&0x1f);
 if (imms & 0x800) imms |= 0xfffff000;    
 uint32_t immu=inst & 0xfffff000;
-
-	pc=pc+4;
 	switch(op){
 	/*   ADD  */	
 case 0x33:
@@ -63,8 +64,8 @@ case 0x37:
         x[rd] = r4(addr);
     }else if (fun3 == 0x4){
              uint32_t addr=x[rs1] + immi;
-            uint8_t x=r(addr);
-						x[rd]=(uint32_t)x;}
+            uint8_t m=r(addr);
+						x[rd]=(uint32_t)m;}
     break;}
 
 
@@ -76,7 +77,7 @@ case 0x37:
     }else if (fun3 == 0x0){
             uint32_t addr=x[rs1] + imms;
 						uint8_t va1l=x[rs2]&0xff;
-						w(addr,va1l)}
+						w(addr,va1l);}
     break;
 	 } 
 	 /* jalr*/ 
@@ -87,7 +88,7 @@ if(fun3==0x0)
  uint32_t target = x[rs1] + immi;
 
     x[rd] = pc + 4;   
-    pc = target & ~1;   
+   next_pc = target & ~1;   
 
   
 }break;}
