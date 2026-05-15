@@ -38,6 +38,10 @@ int main(){
 while(1){
 	load_bin("sum.bin");
 x[0]=0;
+M[0x224] = 0x73;
+M[0x224+1] = 0x00;
+M[0x224+2] = 0x10;
+M[0x224+3] = 0x00;
  uint32_t next_pc = pc + 4;
 	uint32_t inst=M[pc];
   int op=inst&0x7f;
@@ -106,7 +110,7 @@ if(fun3==0x0)
 }break;}  
 
 case 0x73: {   
-    if (inst == 0x224) {  
+    if (inst == 0x00100073) {  
         printf("ebreak hit, stop program\n");
         exit(0);
     }
