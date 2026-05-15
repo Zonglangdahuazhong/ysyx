@@ -35,7 +35,7 @@ void w4(uint32_t addr,uint32_t val)
     fclose(f);
 }
 int main(){
-  int cycle;
+  int cycle=0;
 	load_bin("sum.bin");
 	M[0x228] = 0x73;
    M[0x228+1] = 0x00;
@@ -58,6 +58,7 @@ x[0]=0;
 if (inst & 0x80000000) { 
     imms |= 0xFFFFF000;  
 }
+uint32_t immu = inst & 0xfffff000;
 	switch(op){
 	/*   ADD  */	
 case 0x33:
@@ -75,7 +76,7 @@ case 0x13:
 
 /* lui */
 case 0x37:
-   { x[rd]=imms;
+   { x[rd]=immu;
     break;}
 /* lw  lbu*/
 		case 0x03:
@@ -125,9 +126,6 @@ case 0x73: {
 
 }  pc=next_pc;
 printf("pc=0x%08x inst=0x%08x\n", pc, inst);
-for (int i = 0; i < 32; i++) {
-    printf("%08x\n", ((uint32_t*)M)[i]);
-}
 printf("entry inst = 0x%08x\n", M[0]);
 printf("%d\n",cycle);
 cycle=cycle+1;}
