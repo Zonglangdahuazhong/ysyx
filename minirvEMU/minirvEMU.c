@@ -2,9 +2,17 @@
 #include<stdint.h>
 #include <stdlib.h>
 #define MEM_SIZE 16777216
+#include <am.h>
+#include <klib-macros.h>
 uint32_t pc;
 uint32_t  x[32];
 uint8_t M[MEM_SIZE];
+// 400 * 300 = 120,000 像素，虽然当前指定范围只够 64,000 像素，
+// 但定义足额的 400x300 空间可以防止后续程序越界，并在显示时保持标准比例。
+#define SCREEN_W 400
+#define SCREEN_H 300
+
+uint32_t vram[SCREEN_W * SCREEN_H] = {0}; // 虚拟显存，初始化为全黑
 uint8_t r(uint32_t addr){
 	return M[addr];
 }
@@ -95,6 +103,22 @@ case 0x37:
    { if (fun3 == 0x2) {
         uint32_t addr=x[rs1] + imms;
         w4(addr, x[rs2]);
+				// 假设：
+// addr 是当前 sw 指令计算出来的目标物理地址
+// data 是要写入的 32 位寄存器数值
+
+if (addr >= 0x20000000 && addr < 0x20040000) {
+    // 计算在 vram 数组中的偏移量（按 4 字节对齐）
+    uint32_t offset = (addr - 0x20000000) / 4;
+
+    // 写入虚拟显存
+    if (offset < SCREEN_W * SCREEN_H) {
+        vram[offset] = data;
+    }
+} else {
+    // 原本的普通内存写入逻辑
+    // write_mem(addr, data);
+}
     }else if (fun3 == 0x0){
             uint32_t addr=x[rs1] + imms;
 						uint8_t va1l=x[rs2]&0xff;
@@ -115,7 +139,39 @@ if(fun3==0x0)
 }break;}  
 
 case 0x73: {   
-    if (inst == 0x00100073) {  
+    if (inst == 0x00100073) {  // 负责将 vram 数组完整同步到屏幕的函数
+void flush_vram_to_screen() {
+  // 逐行写入，防止栈溢出，且效率极高
+  for (int y = 0; y < SCREEN_H; y++) {
+    // 传入 vram 对应行的起始指针
+    // 只有最后一行写入时，将最后一个参数 sync 设为 true 触发显示
+    io_write(AM_GPU_FBDRAW, 0, y, &vram[y * SCREEN_W], SCREEN_W, 1, (y == SCREEN_H - 1));
+  }
+}
+
+int main(int argc, char *argv[]) {
+  // 1. 初始化模拟器和内存 ...
+  // 2. 加载你的 vga 编译后的二进制文件 (bin) ...
+  
+  ioe_init(); // 【重要】初始化 AM 的图形和时钟环境
+
+  // 3. 模拟器主循环：解释执行 RISC-V 指令
+  while (!simulation_exited) {
+      execute_one_instruction(); 
+      // 这里的执行过程中会触发上面改写的 sw 拦截并填充 vram
+  }
+
+  // 4. 当 RISC-V 程序执行结束（例如遇到了 halt 或是跑完了指定指令数）
+  // 将最终的虚拟显存画面渲染到真实屏幕上
+  flush_vram_to_screen();
+
+  // 5. 提示：为了防止 minirvEMU 马上退出，让它进入死循环，同时响应键盘防止卡死
+  while (1) {
+      io_read(AM_INPUT_KEYBRD);
+  }
+
+  return 0;
+}
         printf("ebreak hit, stop program\n");
 				printf("Result in x[10] (a0) = %u\n", x[10]);
         exit(0);
